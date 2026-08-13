@@ -1,1 +1,0 @@
-# slovo-translator.github.io
