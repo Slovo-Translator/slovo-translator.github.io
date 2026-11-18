@@ -827,7 +827,7 @@ textarea#userInput::placeholder { color: var(--text-3); opacity: 1; }
         const PREP_N = { "na": "na", "nado": "nado", "nadъ": "nado", "podo": "podo", "podъ": "podo", "pri": "prei",
                          "perd": "perd", "perdъ": "perd", "perz": "perz", "perzъ": "perz", "vuz": "uź", "vъz": "uź" };
         if (PREP_N[lw] !== undefined && !(gram && gram.wc === "noun")) return keepCase(s, PREP_N[lw]);
-        const ADV_ADJ = { "tako": ["takos", "takon"], "to": ["tos", "tos"], "tamo": ["tamos", "tamos"] };   // to — TOS (2026-10-22, twórca)
+        const ADV_ADJ = { /* R179 */ "tako": ["tako", "takon"], "to": ["tos", "tos"], "tamo": ["tamos", "tamos"] };   // to — TOS (2026-10-22, twórca)
         if (ADV_ADJ[lw]) return keepCase(s, ADV_ADJ[lw][gram && (gram.wc === "pronoun" || gram.wc === "adjective") ? 1 : 0]);
         if (gram && gram.wc === "verb" && M.vform && M.vform[lw] !== undefined) return keepCase(s, finE(M.vform[lw]));   // forma czasownika (věstь „wie" ≠ věstь „wieść")
         const ps = POSS.find(p => lw.startsWith(p) && lw.length <= p.length + 3);
@@ -4039,6 +4039,7 @@ window.onload = function() {
                     want.c = "accusative";
                     if (!_acc.some(x => x.num === want.num) && _acc[0].num) want.num = _acc[0].num;
                 }
+                /* R178 */ else if (!_acc.length && !_nc.some(x => x.c === want.c) && _nc.some(x => x.c === "nominative" && x.num === "singular") && !/(?:um|i)$/.test(String(word).toLowerCase())) { want.c = "accusative"; want.num = "singular"; }
             }
             const wantC = want.c, wantNum = want.num;
             const hintC = want.cHint || null, hintNum = want.numHint || null;
@@ -4292,23 +4293,6 @@ window.onload = function() {
                 if (DB.sloGender && DB.sloGender.get(lem) && DB.sloGender.get(lem) !== "feminine") continue;
                 tokens[i] = m[1] + (m[1].length > 1 && m[1] === m[1].toUpperCase() && m[1] !== m[1].toLowerCase() ? "Ę" : "ę");
             }
-            /* R172 */ // „nie ma" bez podmiotu w mianowniku = nětu (brak, nieistnienie), nie „ne jьmatь" (nie posiada)
-            for (let i = 0; i < tokens.length; i++) {
-                if (!isWordArr[i] || !/^ne$/i.test(String(tokens[i]))) continue;
-                let j = i + 1; while (j < tokens.length && !isWordArr[j] && /^\s*$/.test(String(tokens[j]))) j++;
-                if (!(j < tokens.length && isWordArr[j] && /^j[ьi]mat[ьi]?$/i.test(String(tokens[j])))) continue;
-                let subj = false;
-                for (let k = i - 1; k >= 0; k--) {
-                    if (!isWordArr[k]) { if (/[.,;:!?]/.test(String(tokens[k]))) break; continue; }
-                    const g = gramArr && gramArr[k], s = String(tokens[k]).toLowerCase();
-                    if (/^d[ьi]n[ьi]s[ьi]$/.test(s)) continue;
-                    if (/^(on[ъu]?|ona|ono|k[ъu]to|nik[ъu]to|tъ|ta|az[ъu]?|ty)$/.test(s) || ((posArr[k] === "noun" || posArr[k] === "pronoun") && g && g.c === "nominative")) { subj = true; break; }
-                }
-                if (subj) continue;
-                const cap = String(tokens[i])[0] !== String(tokens[i])[0].toLowerCase();
-                tokens[i] = cap ? "Nětu" : "nětu"; posArr[i] = "verb";
-                for (let k = i + 1; k <= j; k++) { tokens[k] = ""; }
-            }
             /* R164 */ // onъ/ona/ono/oni/ony przed rzeczownikiem albo przymiotnikiem = zaimek wskazujący „ów" (nie „on")
             for (let i = 0; i < tokens.length; i++) {
                 if (!isWordArr[i] || !/^(onъ|ona|ono|oni|ony)$/i.test(String(tokens[i]))) continue;
@@ -4341,6 +4325,7 @@ window.onload = function() {
                 if (!pm) continue;
                 let k = -1, seen = 0;
                 for (let j = i + 1; j < tokens.length && seen < 3; j++) { if (!isWordArr[j]) { if (/[.,;:!?]/.test(tokens[j])) break; continue; } seen++; if (posArr[j] === "noun") { k = j; break; } if (posArr[j] !== "adjective") break; }
+                /* R180 */ if (k < 0) for (let j = i - 1; j >= 0; j--) { if (!isWordArr[j]) { if (/[.,;:!?]/.test(tokens[j])) break; continue; } if (posArr[j] === "noun") k = j; break; }
                 if (k < 0 || !gramArr || !gramArr[k]) continue;
                 let ng = gramArr[k]; const pg = gramArr[i] || {}, end = (pm[2] || "").toLowerCase(), st = pm[1];
                 const direct = pg.c === "nominative" || pg.c === "accusative" || !pg.c;
@@ -4411,7 +4396,7 @@ window.onload = function() {
                             if (groups.length && groups[groups.length - 1].noun >= 0) {
                                 /* R166 */ // zaimek osobowy po rzeczowniku to dopełnienie, nie przydawka — zostaje na miejscu
                                 let _neg = false;
-                                for (let t = j + 1, n = 0; t < words.length && n < 3; t++, n++) { if (hardBoundary[t - 1]) break; if (/^(ne|nětu)$/i.test(String(words[t].s))) { _neg = true; break; } }
+                                for (let t = j + 1, n = 0; t < words.length && n < 3; t++, n++) { if (hardBoundary[t - 1]) break; if (/^ne$/i.test(String(words[t].s))) { _neg = true; break; } }
                                 const _stay = [];
                                 for (const m of mods) {
                                     const _s = String(run[m].s).toLowerCase();
@@ -4470,7 +4455,14 @@ window.onload = function() {
                                 _voc = _bef && _aft;
                             }
                             if (_voc) span.sort((p, q) => p - q);
-                            else span.sort((p, q) => (ORDER[run[p].pos] || 99) - (ORDER[run[q].pos] || 99));
+                            else {
+                                span.sort((p, q) => (ORDER[run[p].pos] || 99) - (ORDER[run[q].pos] || 99));
+                                /* R180 */ // dzierżawczy wpisany PO rzeczowniku zostaje po nim (zgoda z rzeczownikiem już policzona wyżej)
+                                if (grp.noun >= 0) {
+                                    const _post = span.filter(mi => mi > grp.noun && run[mi].pos === "pronoun" && (possStem(run[mi].s) || /^(jego|jeji|jihъ?)$/i.test(String(run[mi].s))));
+                                    if (_post.length) { const _rest = span.filter(mi => _post.indexOf(mi) < 0); span.length = 0; for (const x of _rest) span.push(x); for (const x of _post) span.push(x); }
+                                }
+                            }
                             for (const idx of span) out.push({ ...run[idx] });
                         }
 
@@ -4590,6 +4582,12 @@ window.onload = function() {
                     if (_f) { _w.s = applyCaseLike(_w.s, _f); if (_w.pos === "adjective") _w.gram = Object.assign({}, _gr, { c: _c, num: _n, gender: _g, _agr: 1, noun: words[_i].s }); }   /* R105, R124 */
                     _w.gram = Object.assign({}, _gr, { gender: _g, c: _c, num: _n });
                 }
+                /* R180 */ { const _w = words[_i + 1];
+                    if (_w && _w.pos === "pronoun" && (typeof onlySpace === "undefined" || onlySpace[_i]) && possStem(_w.s)) {
+                        const _gr = _w.gram || {}, _c = _ng.c || _gr.c || "nominative", _n = _ng.num || _gr.num || "singular";
+                        const _f = inflectPoss(possStem(_w.s), _g, _c, _n, _ng.anim || "inanimate");
+                        if (_f) _w.s = applyCaseLike(_w.s, _f);
+                        _w.gram = Object.assign({}, _gr, { gender: _g, c: _c, num: _n, ng: { c: _c, num: _n, gender: _g } }); } }
             }
             /* R136 */ for (let _d = 0; _d < words.length; _d++) {
                 const _a = words[_d];
@@ -5252,11 +5250,11 @@ window.onload = function() {
     else t = t.replace(/ǫ/g, "ą").replace(/Ǫ/g, "Ą").replace(/ě/g, "ie").replace(/Ě/g, "Ie");
     return t;
   }
-  function toCzech(t) { t = pslPrep(t, true); return t.replace(/ū/g, "ú").replace(/Ū/g, "Ú").replace(/ē/g, "é").replace(/Ē/g, "É").replace(/ś/g, "š").replace(/Ś/g, "Š"); }
+  function toCzech(t) { t = pslPrep(t, true); return t.replace(/ā/g, "á").replace(/Ā/g, "Á").replace(/ō/g, "ó").replace(/Ō/g, "Ó")/* R177 */.replace(/ū/g, "ú").replace(/Ū/g, "Ú").replace(/ē/g, "é").replace(/Ē/g, "É").replace(/ś/g, "š").replace(/Ś/g, "Š"); }
   function toPolish(t) {
     t = pslPrep(t, false);
     return t.replace(/š/g, "sz").replace(/Š/g, "Sz").replace(/ž/g, "ż").replace(/Ž/g, "Ż").replace(/č/g, "cz").replace(/Č/g, "Cz")
-            .replace(/ū/g, "uu").replace(/Ū/g, "Uu").replace(/ē/g, "ee").replace(/Ē/g, "Ee");   /* R172: długie samogłoski słyszalne także w głosie polskim */
+            .replace(/ā/g, "aa").replace(/Ā/g, "Aa").replace(/ō/g, "oo").replace(/Ō/g, "Oo")/* R177 */.replace(/ū/g, "uu").replace(/Ū/g, "Uu").replace(/ē/g, "ee").replace(/Ē/g, "Ee");   /* R172: długie samogłoski słyszalne także w głosie polskim */
   }
   // GŁOS (2026-10-22, twórca: „przyjemniejszy, męski, bardziej ludzki"): spośród głosów w przeglądarce wybieramy
   // najpierw głosy NEURONOWE (Edge: „… Online (Natural)" — brzmią jak człowiek), a wśród nich MĘSKIE; użytkownik może
@@ -6035,7 +6033,15 @@ window.onload = function() {
     return best;
   }
   // → { lang, sure } albo null
-  function localDetect(text) {
+  function localDetect(text) {   /* R177 */
+    var r1 = localDetect0(text), R = window.slovoR177, t2;
+    try { t2 = R ? R.inn(text) : text; } catch (e) { t2 = text; }
+    if (!R || t2 === text || (r1 && r1.lang === "slo" && r1.sure)) return r1;
+    var r2 = localDetect0(t2); if (!(r2 && r2.lang === "slo" && r2.sure)) return r1;
+    var mx = 0, k; if (r1 && r1.scores) for (k in r1.scores) if (k !== "slo" && r1.scores[k] > mx) mx = r1.scores[k];
+    return (r2.scores && r2.scores.slo > mx) ? r2 : r1;
+  }
+  function localDetect0(text) {
     var t = String(text || "").toLowerCase();
     var words = (t.match(/[\p{L}']+/gu) || []).slice(0, 80);
     if (!words.length) return null;
@@ -8168,6 +8174,75 @@ window.onload = function() {
     ["przyjaciel", "drugъ", MA103], ["przyjaźń", "družьba", F],   /* R117 */
     /* R139 */ ["wół", "volъ", MA103], ["wierzch", "virhъ", M],
     /* R141 */ ["płaski", "plosky", ADJ], ["płasko", "plosko", "adverb"],
+    /* R178 */ ["pokuszenie", "pokušenьje", NT],
+    ["święcić", "svętiti", VB],
+    ["święciła", "svętila", "verb - glagol | past"],
+    ["święciło", "svętilo", "verb - glagol | past"],
+    ["święcił", "svętilъ", "verb - glagol | past"],
+    ["święcimy", "svętimъ", "verb - glagol | present | 1pl"],
+    ["święcicie", "svętite", "verb - glagol | present | 2pl"],
+    ["święcą", "svętętь", "verb - glagol | present | 3pl"],
+    ["święcę", "svęt'ǫ", "verb - glagol | present | 1sg"],
+    ["święcisz", "svętiši", "verb - glagol | present | 2sg"],
+    ["święć", "svęti", IMP],
+    ["święcili", "svętili", "verb - glagol | past"],
+    ["święciły", "svętily", "verb - glagol | past"],
+    ["poświęcić", "posvętiti", VB],
+    ["poświęciła", "posvętila", "verb - glagol | past"],
+    ["poświęciło", "posvętilo", "verb - glagol | past"],
+    ["poświęcimy", "posvętimъ", "verb - glagol | present | 1pl"],
+    ["poświęcicie", "posvętite", "verb - glagol | present | 2pl"],
+    ["poświęcą", "posvętętь", "verb - glagol | present | 3pl"],
+    ["poświęcę", "posvęt'ǫ", "verb - glagol | present | 1sg"],
+    ["poświęcisz", "posvętiši", "verb - glagol | present | 2sg"],
+    ["poświęci", "posvętitь", "verb - glagol | present | 3sg"],
+    ["poświęcił", "posvętilъ", "verb - glagol | past"],
+    ["poświęcili", "posvętili", "verb - glagol | past"],
+    ["poświęciły", "posvętily", "verb - glagol | past"],
+    ["poświęć", "posvęti", IMP],
+    ["kusić", "kusiti", VB],
+    ["kusiła", "kusila", "verb - glagol | past"],
+    ["kusiło", "kusilo", "verb - glagol | past"],
+    ["kusimy", "kusimъ", "verb - glagol | present | 1pl"],
+    ["kusicie", "kusite", "verb - glagol | present | 2pl"],
+    ["kuszą", "kusętь", "verb - glagol | present | 3pl"],
+    ["kuszę", "kušǫ", "verb - glagol | present | 1sg"],
+    ["kusisz", "kusiši", "verb - glagol | present | 2sg"],
+    ["kusi", "kusitь", "verb - glagol | present | 3sg"],
+    ["kusił", "kusilъ", "verb - glagol | past"],
+    ["kusili", "kusili", "verb - glagol | past"],
+    ["kusiły", "kusily", "verb - glagol | past"],
+    ["kuś", "kusi", IMP],
+    ["zbawić", "jьzbaviti", VB],
+    ["zbawiła", "jьzbavila", "verb - glagol | past"],
+    ["zbawiło", "jьzbavilo", "verb - glagol | past"],
+    ["zbawimy", "jьzbavimъ", "verb - glagol | present | 1pl"],
+    ["zbawicie", "jьzbavite", "verb - glagol | present | 2pl"],
+    ["zbawią", "jьzbavętь", "verb - glagol | present | 3pl"],
+    ["zbawię", "jьzbavl'ǫ", "verb - glagol | present | 1sg"],
+    ["zbawisz", "jьzbaviši", "verb - glagol | present | 2sg"],
+    ["zbawi", "jьzbavitь", "verb - glagol | present | 3sg"],
+    ["zbawił", "jьzbavilъ", "verb - glagol | past"],
+    ["zbawili", "jьzbavili", "verb - glagol | past"],
+    ["zbawiły", "jьzbavily", "verb - glagol | past"],
+    ["zbaw", "jьzbavi", IMP],
+    ["wybawić", "jьzbaviti", VB],
+    ["wybawiła", "jьzbavila", "verb - glagol | past"],
+    ["wybawiło", "jьzbavilo", "verb - glagol | past"],
+    ["wybawimy", "jьzbavimъ", "verb - glagol | present | 1pl"],
+    ["wybawicie", "jьzbavite", "verb - glagol | present | 2pl"],
+    ["wybawią", "jьzbavętь", "verb - glagol | present | 3pl"],
+    ["wybawię", "jьzbavl'ǫ", "verb - glagol | present | 1sg"],
+    ["wybawisz", "jьzbaviši", "verb - glagol | present | 2sg"],
+    ["wybawi", "jьzbavitь", "verb - glagol | present | 3sg"],
+    ["wybawił", "jьzbavilъ", "verb - glagol | past"],
+    ["wybawili", "jьzbavili", "verb - glagol | past"],
+    ["wybawiły", "jьzbavily", "verb - glagol | past"],
+    ["wybaw", "jьzbavi", IMP],
+    ["wódź", "vodi", IMP],
+    /* R176 */ ["srom", "sormъ", M],
+    ["sromota", "sormota", F],
+    ["hańba", "sormota", F],
     /* R170 */ ["trzej", "trьje", "adverb"],
     /* R169 */ ["kurz", "porhъ", M],
     ["dech", "dъhъ", M],
@@ -10346,6 +10421,10 @@ window.onload = function() {
     OBL["wichura"] = ["vihъrъ", "masculine", [["wichury", "genitive", "singular"], ["wichurze", "dative", "singular"], ["wichurę", "accusative", "singular"], ["wichurą", "instrumental", "singular"], ["wichurze", "locative", "singular"], ["wichur", "genitive", "plural"], ["wichurom", "dative", "plural"], ["wichury", "accusative", "plural"], ["wichurami", "instrumental", "plural"], ["wichurach", "locative", "plural"], ["wichury", "nominative", "plural"]]];
     OBL["chmura"] = ["hmura", "feminine", [["chmury", "genitive", "singular"], ["chmurze", "dative", "singular"], ["chmurę", "accusative", "singular"], ["chmurą", "instrumental", "singular"], ["chmurze", "locative", "singular"], ["chmur", "genitive", "plural"], ["chmurom", "dative", "plural"], ["chmury", "accusative", "plural"], ["chmurami", "instrumental", "plural"], ["chmurach", "locative", "plural"], ["chmury", "nominative", "plural"]]];
     OBL["wietrzyk"] = ["větrьcь", "masculine", [["wietrzyka", "genitive", "singular"], ["wietrzyku", "genitive", "singular"], ["wietrzykowi", "dative", "singular"], ["wietrzykiem", "instrumental", "singular"], ["wietrzyku", "locative", "singular"], ["wietrzyków", "genitive", "plural"], ["wietrzykom", "dative", "plural"], ["wietrzyki", "accusative", "plural"], ["wietrzykami", "instrumental", "plural"], ["wietrzykach", "locative", "plural"], ["wietrzyki", "nominative", "plural"]]];
+    /* R176 */ OBL["srom"] = ["sormъ", "masculine", [["sromu", "genitive", "singular"], ["sromowi", "dative", "singular"], ["sromem", "instrumental", "singular"], ["sromie", "locative", "singular"], ["sromów", "genitive", "plural"], ["sromom", "dative", "plural"], ["sromy", "accusative", "plural"], ["sromami", "instrumental", "plural"], ["sromach", "locative", "plural"], ["sromy", "nominative", "plural"]]];
+    OBL["sromota"] = ["sormota", "feminine", [["sromoty", "genitive", "singular"], ["sromocie", "dative", "singular"], ["sromotę", "accusative", "singular"], ["sromotą", "instrumental", "singular"], ["sromocie", "locative", "singular"], ["sromot", "genitive", "plural"], ["sromotom", "dative", "plural"], ["sromoty", "accusative", "plural"], ["sromotami", "instrumental", "plural"], ["sromotach", "locative", "plural"], ["sromoty", "nominative", "plural"]]];
+    OBL["hańba"] = ["sormota", "feminine", [["hańby", "genitive", "singular"], ["hańbie", "dative", "singular"], ["hańbę", "accusative", "singular"], ["hańbą", "instrumental", "singular"], ["hańbie", "locative", "singular"], ["hańb", "genitive", "plural"], ["hańbom", "dative", "plural"], ["hańby", "accusative", "plural"], ["hańbami", "instrumental", "plural"], ["hańbach", "locative", "plural"], ["hańby", "nominative", "plural"]]];
+    /* R178 */ OBL["pokuszenie"] = ["pokušenьje", "neuter", [["pokuszenia", "genitive", "singular"], ["pokuszeniu", "dative", "singular"], ["pokuszeniem", "instrumental", "singular"], ["pokuszeniu", "locative", "singular"], ["pokuszeń", "genitive", "plural"], ["pokuszeniom", "dative", "plural"], ["pokuszenia", "accusative", "plural"], ["pokuszeniami", "instrumental", "plural"], ["pokuszeniach", "locative", "plural"], ["pokuszenia", "nominative", "plural"]]];
     /* R144 */ OBL["wola"] = ["vol'a", "feminine", [["woli", "genitive", "singular"], ["woli", "dative", "singular"], ["wolę", "accusative", "singular"], ["wolą", "instrumental", "singular"],
       ["woli", "locative", "singular"], ["wole", "nominative", "plural"], ["wól", "genitive", "plural"], ["wolom", "dative", "plural"], ["wolami", "instrumental", "plural"], ["wolach", "locative", "plural"]]];
     /* R143 */ OBL["wierzch"] = ["virhъ", "masculine", mk("wierzch", ["u", "owi", "", "em", "u"], ["y", "ów"]).concat([["wierzchom", "dative", "plural"], ["wierzchami", "instrumental", "plural"], ["wierzchach", "locative", "plural"]])];
@@ -10354,7 +10433,7 @@ window.onload = function() {
   window.slovoCreatorRows = function (indexRow, DB, phase) {
     /* R134 */ try { if (DB && DB.sloGender) DB.sloGender.set("kamy", "masculine"); } catch (e) {}
     /* R146 */ try { if (DB && DB.slo2pl) DB.slo2pl.set("zemja", { pl: "ziemia", prio: 9999 }); } catch (e) {}
-    /* R172 */ try { if (DB && DB.slo2pl) { DB.slo2pl.set("nětu", { pl: "nie ma", prio: 9999 }); DB.slo2pl.set("nejtu", { pl: "nie ma", prio: 9999 }); } } catch (e) {}
+    /* R178 */ try { [["otpusti", "odpuść"], ["svęti", "święć"], ["jьzbavi", "zbaw"], ["jьzbaviti", "zbawić"], ["svętiti", "święcić"], ["kusiti", "kusić"]].forEach(function (p) { DB.slo2pl.set(p[0], { pl: p[1], prio: 9999 }); }); } catch (e) {}
     /* R172 */ try {
       var S172 = { "słowianom": ["dative", "slověnьmъ"], "słowianami": ["instrumental", "slověnьmi"], "słowianach": ["locative", "slověnьhъ"], "słowian": ["accusative", "slověni"] };
       [[DB.exactPl, 0], [DB.exactFold, 1]].forEach(function (mi) { var mp = mi[0]; if (!mp || !mp.get) return;
@@ -10461,8 +10540,120 @@ window.onload = function() {
     /* R133 */ T.push(["^ujentej$", "aujimtej", "^aujimtej$", "ujentej"], ["^ujentijen$", "aujimtijen", "^aujimtijen$", "ujentijen"],
       ["^uj(im|emlj)", "auj$1", "^auj(im|emlj)", "uj$1"], ["^vūjentej$", "vūjimtej", "^vujimtej$", "vūjentej"], ["^prejjentej$", "prejjimtej", "^prejjimtej$", "prejjentej"]);
     /* R156 */ T.unshift(["^jimontje$", "imontje", "^imontje$", "jimontje"]);
+    /* R174 */ T.unshift(["^lejt(?=on$|a$|u$|umi$|aj$|ū$|ūn$|omus$|ušu$)", "lajt", "^lajt(?=on$|a$|u$|umi$|aj$|ū$|ūn$|omus$|ušu$)", "lejt"]   /* *lěto < *laitan (nie lětati) */,
+      [P+"vejt(?!r)", "$1vajt", P+"vajt", "$1vejt"]   /* *větъ, *obětъ < *waitas (nie větrъ) */,
+      [P+"sejt(?=is$|in$|ejs$|ej$|imi$|ijes$)", "$1sajt", P+"sajt(?=is$|in$|ejs$|ej$|imi$|ijes$)", "$1sejt"]   /* *sětь < *saitas */,
+      [P+"dejl(?=us$|un$|u$|ūn$|umi$|j|i)", "$1dajl", P+"dajl(?=us$|un$|u$|ūn$|umi$|j|i)", "$1dejl"]   /* *dělъ < *dailas */,
+      ["^c[ae]jn", "kajn", "^kajn", "cejn"]   /* *cěna < *kainā (bez palatalizacji) */,
+      ["^c[ae]jv", "kajv", "^kajv", "cejv"]   /* *cěva < *kaiw- */,
+      ["^dz[ae]jl", "gajl", "^gajl", "dzejl"]   /* *dzělo < *gailas */,
+      ["^(.*[aeiouūē].*[^aeiouūēj])ejt(?:i|ej)$", "$1ētej", "^\\u0000$", ""]   /* bezokolicznik na *-ěti < *-ētei (minētej, gorētej) */,
+      ["^ej(?=[dpz])", "ē", "^\\u0000$", ""]   /* *ěda, *ěpa, *ězъ < *ēd-, *ēp-, *ēz- */,
+      [P+"bezvejst(?=[aeiouūēyj]|$)", "$1bezvajst", P+"bezvajst(?=[aeiouūēyj]|$)", "$1bezvejst"]   /* *bezvěstь < *waistis */,
+      [P+"orzsvejt(?=[aeiouūēyj]|$)", "$1orzsvajt", P+"orzsvajt(?=[aeiouūēyj]|$)", "$1orzsvejt"]   /* *orzsvětъ < *swaitas */,
+      [P+"kilovejk(?=[aeiouūēyj]|$)", "$1kilovajk", P+"kilovajk(?=[aeiouūēyj]|$)", "$1kilovejk"]   /* *čьlověčьjь < *kelawaikas */,
+      [P+"nevejst(?=[aeiouūēyj]|$)", "$1nevajst", P+"nevajst(?=[aeiouūēyj]|$)", "$1nevejst"]   /* *nevěsta < *waistei */,
+      [P+"obrejst(?=[aeiouūēyj]|$)", "$1obrēst", P+"obr[ēe]st(?=[aeiouūēyj]|$)", "$1obrejst"]   /* *obrěsti < *wrēt- */,
+      [P+"surejst(?=[aeiouūēyj]|$)", "$1surēst", P+"sur[ēe]st(?=[aeiouūēyj]|$)", "$1surejst"]   /* *sъrěsti < *wrēt- */,
+      [P+"blejsk(?=[aeiouūēyj]|$)", "$1blajsk", P+"blajsk(?=[aeiouūēyj]|$)", "$1blejsk"]   /* *blěskъ < *blaiskas */,
+      [P+"prejsn(?=[aeiouūēyj]|$)", "$1prēsn", P+"pr[ēe]sn(?=[aeiouūēyj]|$)", "$1prejsn"]   /* *prěsnъ < *prēskas */,
+      [P+"brejzg(?=[aeiouūēyj]|$)", "$1brēzg", P+"br[ēe]zg(?=[aeiouūēyj]|$)", "$1brejzg"]   /* *brězgъ < *brēsgas */,
+      [P+"golejm(?=[aeiouūēyj]|$)", "$1golēm", P+"gol[ēe]m(?=[aeiouūēyj]|$)", "$1golejm"]   /* *golěmъ < *galētei */,
+      [P+"krejsl(?=[aeiouūēyj]|$)", "$1krēsl", P+"kr[ēe]sl(?=[aeiouūēyj]|$)", "$1krejsl"]   /* *krěslo < *krēslan */,
+      [P+"drejzg(?=[aeiouūēyj]|$)", "$1drēzg", P+"dr[ēe]zg(?=[aeiouūēyj]|$)", "$1drejzg"]   /* *drězga < *drēgskā */,
+      [P+"stejn(?=[aeiouūēyj]|$)", "$1stajn", P+"stajn(?=[aeiouūēyj]|$)", "$1stejn"]   /* *stěna < *stainā */,
+      [P+"vejdr(?=[aeiouūēyj]|$)", "$1vēdr", P+"v[ēe]dr(?=[aeiouūēyj]|$)", "$1vejdr"]   /* *vědro < *wēderan */,
+      [P+"svejt(?=[aeiouūēyj]|$)", "$1svajt", P+"svajt(?=[aeiouūēyj]|$)", "$1svejt"]   /* *světъ < *swaitas */,
+      [P+"grejn(?=[aeiouūēyj]|$)", "$1grēn", P+"gr[ēe]n(?=[aeiouūēyj]|$)", "$1grejn"]   /* *grěnъ < *grēnas */,
+      [P+"spejt(?=[aeiouūēyj]|$)", "$1spēt", P+"sp[ēe]t(?=[aeiouūēyj]|$)", "$1spejt"]   /* *spěti < *spētei */,
+      [P+"spejš(?=[aeiouūēyj]|$)", "$1spēš", P+"sp[ēe]š(?=[aeiouūēyj]|$)", "$1spejš"]   /* *spěšiti < *spētei */,
+      [P+"lejzt(?=[aeiouūēyj]|$)", "$1lēzt", P+"l[ēe]zt(?=[aeiouūēyj]|$)", "$1lejzt"]   /* *lězti < *lēztei */,
+      [P+"sejst(?=[aeiouūēyj]|$)", "$1sēst", P+"s[ēe]st(?=[aeiouūēyj]|$)", "$1sejst"]   /* *sěsti < *sēstei */,
+      [P+"bejtj(?=[aeiouūēyj]|$)", "$1bētj", P+"b[ēe]tj(?=[aeiouūēyj]|$)", "$1bejtj"]   /* *běťi < *bēgtei */,
+      [P+"blejd(?=[aeiouūēyj]|$)", "$1blajd", P+"blajd(?=[aeiouūēyj]|$)", "$1blejd"]   /* *blědъ < *blaid */,
+      [P+"glejn(?=[aeiouūēyj]|$)", "$1glajn", P+"glajn(?=[aeiouūēyj]|$)", "$1glejn"]   /* *glěnь < *glainis */,
+      [P+"orejš(?=[aeiouūēyj]|$)", "$1orajš", P+"orajš(?=[aeiouūēyj]|$)", "$1orejš"]   /* *orěxъ < *araisas */,
+      [P+"plejn(?=[aeiouūēyj]|$)", "$1plēn", P+"pl[ēe]n(?=[aeiouūēyj]|$)", "$1plejn"]   /* *plěna < *plēnā */,
+      [P+"pejst(?=[aeiouūēyj]|$)", "$1pajst", P+"pajst(?=[aeiouūēyj]|$)", "$1pejst"]   /* *pěstъ < *paista */,
+      [P+"glejv(?=[aeiouūēyj]|$)", "$1glajv", P+"glajv(?=[aeiouūēyj]|$)", "$1glejv"]   /* *glěvъ < *glaiwas */,
+      [P+"plejv(?=[aeiouūēyj]|$)", "$1plēv", P+"pl[ēe]v(?=[aeiouūēyj]|$)", "$1plejv"]   /* *plěva < *plēwā */,
+      [P+"svejg(?=[aeiouūēyj]|$)", "$1svajg", P+"svajg(?=[aeiouūēyj]|$)", "$1svejg"]   /* *svěžь < *swaigis */,
+      [P+"vejsk(?=[aeiouūēyj]|$)", "$1vajsk", P+"vajsk(?=[aeiouūēyj]|$)", "$1vejsk"]   /* *věščь < *waistei */,
+      [P+"slejd(?=[aeiouūēyj]|$)", "$1slajd", P+"slajd(?=[aeiouūēyj]|$)", "$1slejd"]   /* *slědъ < *slaidus */,
+      [P+"drejk(?=[aeiouūēyj]|$)", "$1drajk", P+"drajk(?=[aeiouūēyj]|$)", "$1drejk"]   /* *drěkъ < *draikas */,
+      [P+"hlejv(?=[aeiouūēyj]|$)", "$1hlajv", P+"hlajv(?=[aeiouūēyj]|$)", "$1hlejv"]   /* *xlěvъ < *klaiwas */,
+      [P+"utejš(?=[aeiouūēyj]|$)", "$1utajš", P+"utajš(?=[aeiouūēyj]|$)", "$1utejš"]   /* *utěxa < *taisītei */,
+      [P+"obejt(?=[aeiouūēyj]|$)", "$1obajt", P+"obajt(?=[aeiouūēyj]|$)", "$1obejt"]   /* *obětъ < *waitas */,
+      [P+"vejšč(?=[aeiouūēyj]|$)", "$1vajšč", P+"vajšč(?=[aeiouūēyj]|$)", "$1vejšč"]   /* *věščati < *waistei */,
+      [P+"mejn(?=[aeiouūēyj]|$)", "$1majn", P+"majn(?=[aeiouūēyj]|$)", "$1mejn"]   /* *měna < *mainā */,
+      [P+"mejr(?=[aeiouūēyj]|$)", "$1mēr", P+"m[ēe]r(?=[aeiouūēyj]|$)", "$1mejr"]   /* *měra < *mērā */,
+      [P+"dejd(?=[aeiouūēyj]|$)", "$1dēd", P+"d[ēe]d(?=[aeiouūēyj]|$)", "$1dejd"]   /* *dědъ < *dēd- */,
+      [P+"dejg(?=[aeiouūēyj]|$)", "$1dajg", P+"dajg(?=[aeiouūēyj]|$)", "$1dejg"]   /* *děgati < *daigteider */,
+      [P+"lejš(?=[aeiouūēyj]|$)", "$1lajš", P+"lajš(?=[aeiouūēyj]|$)", "$1lejš"]   /* *lěxa < *laisā */,
+      [P+"dejž(?=[aeiouūēyj]|$)", "$1dajž", P+"dajž(?=[aeiouūēyj]|$)", "$1dejž"]   /* *děža < *daizjā */,
+      [P+"bejž(?=[aeiouūēyj]|$)", "$1bēž", P+"b[ēe]ž(?=[aeiouūēyj]|$)", "$1bejž"]   /* *běžati < *bēgjātei */,
+      [P+"sejv(?=[aeiouūēyj]|$)", "$1sēv", P+"s[ēe]v(?=[aeiouūēyj]|$)", "$1sejv"]   /* *sěverъ < *sēweras */,
+      [P+"lejp(?=[aeiouūēyj]|$)", "$1lajp", P+"lajp(?=[aeiouūēyj]|$)", "$1lejp"]   /* *lěpiti < *laip- */,
+      [P+"bejs(?=[aeiouūēyj]|$)", "$1bajs", P+"bajs(?=[aeiouūēyj]|$)", "$1bejs"]   /* *běsъ < *baisas */,
+      [P+"vejr(?=[aeiouūēyj]|$)", "$1vēr", P+"v[ēe]r(?=[aeiouūēyj]|$)", "$1vejr"]   /* *věra < *wērā */,
+      [P+"vejv(?=[aeiouūēyj]|$)", "$1vēv", P+"v[ēe]v(?=[aeiouūēyj]|$)", "$1vejv"]   /* *věverica < *wēweris */,
+      [P+"rejd(?=[aeiouūēyj]|$)", "$1rēd", P+"r[ēe]d(?=[aeiouūēyj]|$)", "$1rejd"]   /* *rědъkъ < *rēdas */,
+      [P+"ejsn(?=[aeiouūēyj]|$)", "$1ajsn", P+"ajsn(?=[aeiouūēyj]|$)", "$1ejsn"]   /* *ěsnъ < *aisknas */,
+      [P+"sejn(?=[aeiouūēyj]|$)", "$1sajn", P+"sajn(?=[aeiouūēyj]|$)", "$1sejn"]   /* *sěno < *sainan */,
+      [P+"lejn(?=[aeiouūēyj]|$)", "$1lēn", P+"l[ēe]n(?=[aeiouūēyj]|$)", "$1lejn"]   /* *lěnъ < *lēnas */,
+      [P+"pejš(?=[aeiouūēyj]|$)", "$1pēš", P+"p[ēe]š(?=[aeiouūēyj]|$)", "$1pejš"]   /* *pěšь < *pēdsjas */,
+      [P+"mejl(?=[aeiouūēyj]|$)", "$1mēl", P+"m[ēe]luk", "$1mejluk"]   /* *mělъkъ < *mēlus */,
+      [P+"rejz(?=[aeiouūēyj]|$)", "$1rēz", P+"r[ēe]z(?=[aeiouūēyj]|$)", "$1rejz"]   /* *rězati < *rēztei */,
+      [P+"rejp(?=[aeiouūēyj]|$)", "$1rēp", P+"r[ēe]p(?=[aeiouūēyj]|$)", "$1rejp"]   /* *rěpa < *rēpā */,
+      [P+"mejg(?=[aeiouūēyj]|$)", "$1majg", P+"majg(?=[aeiouūēyj]|$)", "$1mejg"]   /* *měžiti < *maigītei */,
+      [P+"tejš(?=[aeiouūēyj]|$)", "$1tajš", P+"tajš(?=[aeiouūēyj]|$)", "$1tejš"]   /* *těšiti < *taisītei */,
+      [P+"dejv(?=[aeiouūēyj]|$)", "$1dēv", "^\\u0000$", ""]   /* *děvati < *dētei */,
+      [P+"dejn(?=[aeiouūēyj]|$)", "$1dēn", P+"d[ēe]n(?=[aeiouūēyj]|$)", "$1dejn"]   /* *děnǫti < *dētei */,
+      [P+"ejz(?=[aeiouūēyj]|$)", "$1ēz", "^\\u0000$", ""]   /* *ězъ < *ēzas */,
+      [P+"ejp(?=[aeiouūēyj]|$)", "$1ēp", "^\\u0000$", ""]   /* *ěpa < *ēpā */,
+      [P+"vejnik", "$1vajnik", P+"vajnik", "$1vejnik"]   /* *věnьcь < *wainikas */,
+      [P+"dejlon", "$1dēlon", P+"d[ēe]lon", "$1dejlon"]   /* *dělo < *dēlan */,
+      [P+"dejlat", "$1dēlat", P+"d[ēe]lat", "$1dejlat"]   /* *dělati < *dēlan */,
+      [P+"dejlit", "$1dajlit", P+"dajlit", "$1dejlit"]   /* *děliti < *dail- */,
+      [P+"mejsit", "$1majsit", P+"majsit", "$1mejsit"]   /* *měsiti < *maisītei */,
+      [P+"vejno", "$1vēno", P+"v[ēe]no", "$1vejno"]   /* *věno < *wēdnan */,
+      [P+"sejmi", "$1sajmi", P+"sajmi", "$1sejmi"]   /* *sěmь < *saim- */,
+      [P+"vejko", "$1vēko", P+"v[ēe]ko", "$1vejko"]   /* *věko < *wēkan */);
+    /* R175 */ T.unshift([P+"sv(?:ej|aj)t", "$1śvajt", P+"śvajt", "$1svejt"]   /* *světъ < *śwaitas */,
+      [P+"svent", "$1śvent", P+"śvent", "$1svent"]   /* *svętъ < *śwentas */,
+      ["^zim", "źim", "^źim", "zim"]   /* *zima < *źeimā */,
+      ["^zirn", "źirn", "^źirn", "zirn"]   /* *zьrno < *źirnan */,
+      ["^sut(?=o$|a$|u$|on$)", "śut", "^śut(?=o$|a$|u$|on$)", "sut"]   /* *sъto < *śumtan */,
+      [P+"nes(?=tej|ti$|on$|eši|eti|emus|ete$|onti|lus|la$|lo$|li$|i$|ite$)", "$1neś", P+"neś(?=tej|ti$|on$|eši|eti|emus|ete$|onti|lus|la$|lo$|li$|i$|ite$)", "$1nes"]   /* *nesti < *neśtei */,
+      [P+"vez(?=tej|ti$|on$|eši|eti|emus|ete$|onti|lus|la$|lo$|li$|i$|ite$)", "$1veź", P+"veź(?=tej|ti$|on$|eši|eti|emus|ete$|onti|lus|la$|lo$|li$|i$|ite$)", "$1vez"]   /* *vezti < *weźtei */,
+      [P+"voz(?=itej|iti|jon|iši|imus|ite$|inti|i$|il)", "$1voź", P+"voź(?=itej|iti|jon|iši|imus|ite$|inti|i$|il)", "$1voz"]   /* *voziti < *waźītei */,
+      [P+"voz(?=us$|un$|a$|u$|umi$|aj$|i$|ū$|ūn$|ovi|on$)", "$1voź", P+"voź(?=us$|un$|a$|u$|umi$|aj$|i$|ū$|ūn$|ovi|on$)", "$1voz"]   /* *vozъ < *waźas */,
+      [P+"pros(?=itej|iti|jon|iši|imus|ite$|inti|i$|il)", "$1proś", P+"proś(?=itej|iti|jon|iši|imus|ite$|inti|i$|il)", "$1pros"]   /* *prositi < *praśītei */,
+      [P+"pis(?=atej|ati|al|an)", "$1piś", P+"piś(?=atej|ati|al|an)", "$1pis"]   /* *pьsati < *peiśtei */,
+      [P+"liz(?=atej|ati|al|aj)", "$1liź", P+"liź(?=atej|ati|al|aj)", "$1liz"]   /* *lizati < *leiźtei */,
+      ["^berz", "berź", "^berź", "berz"]   /* *berza < *berźas */,
+      [P+"r(?:ej|ē)z(?=a|j)", "$1rēź", P+"r[ēe]ź(?=a|j)", "$1rejz"]   /* *rězati < *rēźtei */,
+      ["^vosk", "vośk", "^vośk", "vosk"]   /* *voskъ < *waśka */,
+      ["^ošto$", "ośto", "^\\u0000$", ""]   /* *osmь < *aśtō */,
+      ["^osm", "ośm", "^ośm", "osm"]   /* *osmъ < *aśtmas */,
+      ["^os(?=is$|i$|in$|ejs$|ej$|imi$|ijes$|ijon$)", "oś", "^oś(?=is$|i$|in$|ejs$|ej$|imi$|ijes$|ijon$)", "os"]   /* *osь < *aśis */,
+      ["^s(?:ej|ē)ver", "śēver", "^ś[ēe]ver", "sejver"]   /* *sěverъ < *śēweras */,
+      ["^s(?:ej|aj)n(?=on$|o$|a$|u$|umi$|aj$)", "śajn", "^śajn(?=on$|o$|a$|u$|umi$|aj$)", "sejn"]   /* *sěno < *śainan */,
+      ["^sirot", "śirot", "^śirot", "sirot"]   /* *sirota < *śeiras */,
+      ["^sork(?=a$|ūs$|aj$|on$|ojon$|o$|ū$|ūn$|amus|ons$|amis|ašu|asu|in)", "śork", "^śork(?=a$|ūs$|aj$|on$|ojon$|o$|ū$|ūn$|amus|ons$|amis|ašu|asu|in)", "sork"]   /* *sorka < *śarkā */,
+      ["^sirn(?=a$|ūs$|aj$|on$|ojon$|o$|ū$|ūn$|amus|ons$|amis|ašu|asu|in)", "śirn", "^śirn(?=a$|ūs$|aj$|on$|ojon$|o$|ū$|ūn$|amus|ons$|amis|ašu|asu|in)", "sirn"]   /* *sьrna < *śirnā */,
+      ["^zmij", "źmij", "^źmij", "zmij"]   /* *zmьja < *źmijā */,
+      ["^zent(?=is$|i$|in$|ejs$|ej$|imi$|ijes$|ijon$)", "źent", "^źent(?=is$|i$|in$|ejs$|ej$|imi$|ijes$|ijon$)", "zent"]   /* *zętь < *źentas */,
+      ["^zajen(?=[ck])", "źajin", "^źajin(?=[ck])", "zajen"]   /* *zajęcь < *źōjinkas (ę z *in = in) */,
+      ["^m(?:ej|ē)sen(?=[ck])", "mēsin", "^m[ēe]sin(?=[ck])", "mejsen"]   /* *měsęcь < *mēsinkas (ę z *in = in) */,
+      ["^ovis(?=us$|un$|a$|u$|umi$|aj$|i$|ū$|ūn$|ovi|on$)", "oviś", "^oviś(?=us$|un$|a$|u$|umi$|aj$|i$|ū$|ūn$|ovi|on$)", "ovis"]   /* *ovьsъ < *awiśas */);
+    /* R179 */ T.unshift(["^takos$", "tako", "^\\u0000$", ""]);
+    /* R178 */ T.unshift(["^jizbav", "izbav", "^izbav", "jizbav"], ["motj(?=is$|ejs?$|in$|i$|imi$|ijes$|ijon$|imus$|išu$|ins$)", "mogt", "mogt(?=is$|ejs?$|in$|i$|imi$|ijes$|ijon$|imus$|išu$|ins$)", "motj"],   /* *moťь < pbsł. *magtis */
+      ["^((?:ot|po|do|per|za|na|orz|su|vū|au|iz)+)p(?:au|u)stej$", "$1pausti", "^((?:ot|po|do|per|za|na|orz|su|vū|au|iz)+)pausti$", "$1pusti"],
+      ["^((?:po)?)[sś]ventej$", "$1śventi", "^\\u0000$", ""]);   /* święć (rozkaźnik) */   /* odpuść (rozkaźnik, nie bezokolicznik) */
+    /* R176 */ T.unshift(["^sorm", "śorm", "^śorm", "sorm"]);
     /* R173 */ T.unshift(["^vod(a|ūs|aj|on|ojon|o|ū|ūn|amus|ons|amis|ašu|asu|in[a-zūē]*)$", "vond$1", "^vond(a|[ūu]s|aj|on|ojon|o|[ūu]|[ūu]n|amus|ons|amis|ašu|asu|in[a-zūē]*)$", "vod$1"]);
-    /* R172 */ T.unshift(["^[sś]lov(?:ē|ej|e)ni$", "slovēnins", "^[sś]lov[ēe]nins$", "slověni"], ["^[sś]lov(?:ē|ej|e)nimi$", "slovēnimis", "^[sś]lov[ēe]nimis$", "slověnьmi"], ["^n(ej|aj|ē)tu$", "nētu", "^n[ēe]tu$", "nejtu"]);
+    /* R172 */ T.unshift(["^[sś]lov(?:ē|ej|e)ni$", "slovēnins", "^[sś]lov[ēe]nins$", "slověni"], ["^[sś]lov(?:ē|ej|e)nimi$", "slovēnimis", "^[sś]lov[ēe]nimis$", "slověnьmi"]);
     /* R171 */ T.unshift(["^ejdlūn$", "ēdlus", "^ēdlus$", "ejdlūn"], ["^obejd", "obēd", "^ob[ēe]d(?=us$|un$|a$|u$|aj$|umi$|i$|ū$)", "obejd"],
       ["^ej(dinti|dl|den|dim|dite|stej|sti|ste|mi|mus|si|tl|da$|dū$|don$)", "ē$1", "^[ēe](dinti|dl|den|dim|dite|stej|mi|mus|tl)", "ej$1"], ["^u(v[aeiēo]|tek)", "au$1", "^au(v[aeiēo]|tek)", "u$1"]);
     /* R170 */ T.unshift(["^((?:za|na|ob|orz|per|pro|po)+)vejtr", "$1vētr", "^((?:za|na|ob|orz|per|pro|po)+)v[ēe]tr", "$1vejtr"]);
@@ -11530,6 +11721,173 @@ window.onload = function() {
       g.__r168 = true; g.__r159 = true; g.__r158 = true; g.__r154 = true; g.__r151 = true; g.__r149 = true; g.__r144 = true; g.__r138 = true; g.__r136 = true; g.__r124 = true; g.__r123 = true; window.slovoEarlyIn = g; }
   };
   var go = function () { setTimeout(wrap, 0); setTimeout(wrap, 230); };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
+  wrap();
+})();
+</script>
+<script>
+/* R175 */ (function () {   // *-ęcь < pbsł. *-inkas: źajinkus, mēsinkus (k w całej odmianie, mianownik na -us)
+  var L = "A-Za-zÀ-žĀ-ɏ";
+  var kc = function (o, r) { return (o[0] !== o[0].toLowerCase()) ? r[0].toUpperCase() + r.slice(1) : r; };
+  var out = function (t) { return t == null ? t : String(t).replace(new RegExp("[" + L + "]+", "g"), function (w) {
+    var m = /^(źajin|mēsin)c([a-zūē]*)$/.exec(w.toLowerCase()); return m ? kc(w, m[1] + "k" + (m[2] === "is" ? "us" : m[2])) : w; }); };
+  var inn = function (t) { return t == null ? t : String(t).replace(new RegExp("[" + L + "]+", "g"), function (w) {
+    var m = /^(źajin|m[ēe]sin)k([a-zūē]*)$/.exec(w.toLowerCase()); return m ? kc(w, m[1] + "c" + (m[2] === "us" ? "is" : m[2])) : w; }); };
+  var wrap = function () {
+    var o = window.slovoNormaOut, e = window.slovoEarlyIn;
+    if (typeof o === "function" && !o.__r175) { var f = function (t) { return out(o.apply(this, arguments)); }; f.__r175 = true; f.__r168 = true; f.__r159 = true; f.__r158 = true; f.__r154 = true; f.__r149 = true; f.__r123 = true; f.__r124 = true; window.slovoNormaOut = f; }
+    if (typeof e === "function" && !e.__r175) { var g = function (t) { var a = Array.prototype.slice.call(arguments); a[0] = inn(a[0]); return e.apply(this, a); };
+      g.__r175 = true; g.__r168 = true; g.__r159 = true; g.__r158 = true; g.__r154 = true; g.__r151 = true; g.__r149 = true; g.__r144 = true; g.__r138 = true; g.__r136 = true; g.__r124 = true; g.__r123 = true; window.slovoEarlyIn = g; }
+  };
+  var go = function () { setTimeout(wrap, 0); setTimeout(wrap, 230); };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
+  wrap();
+})();
+</script>
+<script>
+/* R177 */ (function () {   // wariant pierwotny w pisowni źródła: a / ā / ō, -as, -an
+  var VOW = "aeiouūēāōy";
+  var isV = function (c) { return c !== undefined && c !== "" && VOW.indexOf(c) >= 0; };
+  var USTEM_OLD = /^((?:po|na)?virš|dom|sūn|med|vol|led|pol)(us|un)$/;
+  var USTEM_NEW = /^((?:pa|nā|nō)?virš|dam|sūn|med|val|led|pal)(us|un)$/;
+  var OS = /^(ta|ka|nika|nēka|tāma|aka|auša|čauda|derva|ślava|slava|kala|neba|tejla|tēla)s$/;   // nowe -as ze starego -os
+  var SHORT = { sun: 1, vun: 1, kun: 1 };
+  // korzenie z pbsł. *ō (słow. a): [nowa pisownia z ā, postać źródłowa]
+  var PX = "^((?:pa|at|iz|su|źō|zā|prej|per|au|dā|nō|nā|ab|arz|ne|vuz|pri|vū)*)";
+  var OO = [
+    [/^(ne)?nā/, "$1nō"],                                   // *nō: na, nad, naš-, nag-, nas, nam
+    [/^(ne)?zā/, "$1źō"],                                   // *źō: za
+    [/^ā$/, "ō"], [/^ābū$/, "ōbū"],                          // *ō: a, aby
+    [new RegExp(PX + "dā(?=tej$|ti$|mi$|si$|sti$|mas$|ste$|te$|dinti$|l(?:as|ā|a|i|ūs|an|ē)$|v[āa]t|vāj|jan$|ješi$|jeti$|jem|jete$|janti$)"), "$1dō"],   // *dōtei
+    [new RegExp(PX + "dār(?=as$|ā$|u$|an$|umi$|i$|ūn$|ūs$|amas$|it|av[āa]|uj|jan$|iši$)"), "$1dōr"],   // *dōra
+    [new RegExp(PX + "dān(?=is$|i$|in$|ej|imi$|as$|ā$|a$|ūs$|aj|ān$|an$|āmas$|āmis$)"), "$1dōn"],   // *dōnis
+    [new RegExp(PX + "[zź]nā(?=tej$|ti$|[jlmnkš]|$)"), "$1źnō"],      // *źnōtei
+    [/([śs])lāv/, "ślōv"],                                   // *ślōwā
+    [/prāv(?!un)/, "prōv"],                                  // *prōwas
+    [/^(nāji)?māl(?!in|āv|jār)/, "$1mōl"],                    // *mōlas
+    [/^vās(?=j)/, "vōs"],                                    // *wōśjas
+    [/^rāz(?=as$|ā$|u$|an$|umi$|i$|ūn$|ūs$|amas$|ūmi$)/, "rōź"],   // *rōźas
+    [/sād(?!l)/, "sōd"],                                     // *sōdītei
+    [/māz(?=[āaijel])/, "mōź"], [/^māsl/, "mōsl"], [/^māst(?=is$|i$|in$|ej|imi|ijes|ijan)/, "mōst"],   // *mōź-
+    [/^jāgad/, "jōgad"], [/^jāj(?=e|ik)/, "jōj"],            // *ōgā, *ōjan
+    [/^(d[u]?)vā$/, "$1vō"], [/^abā$/, "abō"],               // *duwō, *abō
+    [/^aśta$/, "aśtō"],                                      // *aśtō
+    [/^([nt]?[ēe]?)kāk/, "$1kōk"], [/^tāk/, "tōk"], [/^jāk/, "jōk"],          // *kōkas (tōkas przez analogię)
+    [/^źājin/, "źōjin"],                                     // *źōjinkas
+    [new RegExp(PX + "dād(?=j|i|e)"), "$1dōd"],              // *dōd- (daj, dadzą)
+    [/^(ni|nē|ne)?kata$/, "$1kas"],                           // *kas (kto)
+    [/^vandā$/, "vandō"]                                     // *wandō (mianownik)
+  ];
+  var OOR = [ [/^źōjin/, "źājin"], [/^vandō$/, "vandā"], [/^aśtō$/, "aśta"], [/rōź/, "rāz"], [/mōź/, "māz"], [/^(ne)?źō/, "$1zā"] ];
+  function vf(s) {   // stara pisownia -> nowa (samogłoski)
+    var o = "", n = s.length;
+    for (var i = 0; i < n; i++) { var c = s[i];
+      if (c === "o") o += "a";
+      else if (c === "a") { var d = s[i + 1]; o += ((d === "j" || d === "u") && !isV(s[i + 2])) ? "a" : "ā"; }
+      else o += c; }
+    return o;
+  }
+  function vr(s) {   // nowa -> stara
+    var o = "", n = s.length;
+    for (var i = 0; i < n; i++) { var c = s[i];
+      if (c === "ā" || c === "ō") o += "a";
+      else if (c === "a") { var d = s[i + 1]; o += ((d === "j" || d === "u") && !isV(s[i + 2])) ? "a" : "o"; }
+      else o += c; }
+    return o;
+  }
+  function fwd(lw, longN) {
+    if (SHORT[lw]) return lw;
+    var end = "", m = USTEM_OLD.exec(lw);
+    if (m) { end = m[2]; lw = m[1]; }
+    else if (/usjis$/.test(lw)) { end = "as"; lw = lw.slice(0, -5); }   // dobrusjis → dabras
+    else if (/jis$/.test(lw) && lw.length > 4) { end = "as"; lw = lw.slice(0, -2); }   // miękkie o-tematy: *mangjas, *kanjas
+    else if (/jin$/.test(lw) && lw.length > 4) { end = "an"; lw = lw.slice(0, -2); }
+    else if (/[^aeiouūē]us$/.test(lw)) { end = "as"; lw = lw.slice(0, -2); }
+    else if (/[^aeiouūē]un$/.test(lw) && lw.length > 3) { end = "an"; lw = lw.slice(0, -2); }
+    else if (longN && /on$/.test(lw) && lw.length > 2) { end = "ān"; lw = lw.slice(0, -2); }
+    else if (/[^aeiouūē]ons$/.test(lw) && lw.length > 4) { end = "āns"; lw = lw.slice(0, -3); }   // biernik l.mn. żeński: *-āns
+    var r = end ? vf(lw + "ē").slice(0, -1) + end : vf(lw);
+    for (var i = 0; i < OO.length; i++) r = r.replace(OO[i][0], OO[i][1]);
+    return r;
+  }
+  function rev(lw, pick) {
+    for (var i = 0; i < OOR.length; i++) lw = lw.replace(OOR[i][0], OOR[i][1]);
+    if (/ān$/.test(lw) && lw.length > 2) return vr(lw.slice(0, -2) + "ē").slice(0, -1) + "on";
+    if (/āns$/.test(lw) && lw.length > 4) return vr(lw.slice(0, -3) + "ē").slice(0, -1) + "ons";
+    if (SHORT[lw]) return lw;
+    var m = USTEM_NEW.exec(lw);
+    if (m) return vr(m[1] + "ē").slice(0, -1) + m[2];
+    if (/asjis$/.test(lw)) return vr(lw.slice(0, -5) + "ē").slice(0, -1) + "usjis";
+    if (/jas$/.test(lw) && lw.length > 4) { var sj = vr(lw.slice(0, -2) + "ē").slice(0, -1); return sj + (/^(moj|tvoj|svoj|nasj|vasj)$|ej$/.test(sj) ? "us" : "is"); }
+    if (/[^aeiouūēāō]as$/.test(lw)) { var st = vr(lw.slice(0, -2) + "ē").slice(0, -1); return st + (OS.test(lw) ? "os" : "us"); }
+    if (/[^aeiouūēāō]an$/.test(lw) && lw.length > 3) { var s2 = vr(lw.slice(0, -2) + "ē").slice(0, -1);
+      return s2 + (pick ? pick(s2) : "on"); }
+    return vr(lw);
+  }
+
+  var EXC = {"ślōvajan": "slavojon", "ślōvajkūs": "ślavojkūs", "ślōvajkaj": "ślavojkaj", "ślōvajkan": "ślavojkon", "ślōvajkajan": "ślavojkojon", "ślōvajkūn": "ślavojkūn", "ślōvajkāmas": "ślavojkamus", "ślōvajkāmis": "ślavojkamis", "ślōvajkāsu": "ślavojkasu", "prejentaumu": "prejentoumu", "sukenstilivaumu": "sukenstilivoumu", "neźnōjemajan": "neznajemojon", "cejlaumu": "cejloumu", "serdinaumu": "serdinoumu", "najserdinaumu": "najserdinoumu", "edinaukū": "edinoukū", "edinaukāga": "edinoukago", "edinaukumu": "edinoukumu", "edinaukūmas": "edinoukūmus", "edinaukajmi": "edinoukajmi", "edinaukā": "edinouka", "edinaukaji": "edinoukoji", "edinaukan": "edinoukon", "edinaukajan": "edinoukojon", "edinauke": "edinouke", "edinauka": "edinouko", "edinauki": "edinouki", "edinaukūšu": "edinoukūšu", "edinaukūmis": "edinoukūmis", "źnōkinaji": "znakinoji", "źnōkinajan": "znakinojon", "dāvinaumu": "davinoumu", "źnōjemajan": "znajemojon", "ślōvinaji": "slavinoji", "ślōvinajan": "slavinojon", "ślōvitinaji": "slavitinoji", "ślōvitinajan": "slavitinojon", "inaumu": "inoumu", "edinaukējišiji": "edinoukējišiji", "edinaukējišijega": "edinoukējišijego", "edinaukējišijemu": "edinoukējišijemu", "edinaukējišijimi": "edinoukējišijimi", "edinaukējišijemi": "edinoukējišijemi", "edinaukējišijā": "edinoukējišija", "edinaukējišijeji": "edinoukējišijeji", "edinaukējišijan": "edinoukējišijon", "edinaukējišijejan": "edinoukējišijejon", "edinaukējišije": "edinoukējišije", "edinaukējišijišu": "edinoukējišijišu", "edinaukējišijimu": "edinoukējišijimu", "nōjiedinaukējišiji": "najiedinoukējišiji", "nōjiedinaukējišijega": "najiedinoukējišijego", "nōjiedinaukējišijemu": "najiedinoukējišijemu", "nōjiedinaukējišijimi": "najiedinoukējišijimi", "nōjiedinaukējišijemi": "najiedinoukējišijemi", "nōjiedinaukējišijā": "najiedinoukējišija", "nōjiedinaukējišijeji": "najiedinoukējišijeji", "nōjiedinaukējišijan": "najiedinoukējišijon", "nōjiedinaukējišijejan": "najiedinoukējišijejon", "nōjiedinaukējišije": "najiedinoukējišije", "nōjiedinaukējišijišu": "najiedinoukējišijišu", "nōjiedinaukējišijimu": "najiedinoukējišijimu", "gnajan": "gnojin", "vajan": "vojin", "nōpajan": "napojin", "nōbajan": "nabojin", "padabajan": "podobojin", "arzvajan": "orzvojin", "sāmaarzvajan": "samoorzvojin", "źōstajan": "zastojin", "nepakajan": "nepokojin", "bajan": "bojin", "nōvajan": "navojin", "nōstrajan": "nastrojin", "strajan": "strojin", "suvajan": "suvojin", "krajan": "krojin", "sulajan": "sulojin", "lajan": "lojin", "arzbajan": "orzbojin", "ślōvajkāns": "slavojkons", "aupajan": "aupojin", "strajiteljan": "strojiteljin", "edinaukūmi": "edinoukūmi", "sāmauparvinū": "samouporvinū", "sāmauparvināga": "samouporvinago", "sāmauparvinumu": "samouporvinumu", "sāmauparvinūmi": "samouporvinūmi", "sāmauparvinajmi": "samouporvinajmi", "sāmauparvinā": "samouporvina", "sāmauparvinaji": "samouporvinoji", "sāmauparvinan": "samouporvinon", "sāmauparvinajan": "samouporvinojon", "sāmauparvine": "samouporvine", "sāmauparvina": "samouporvino", "sāmauparvini": "samouporvini", "sāmauparvinūšu": "samouporvinūšu", "sāmauparvinūmas": "samouporvinūmus", "sāmauparvinūmis": "samouporvinūmis", "sāmauparvinējišiji": "samouporvinējišiji", "sāmauparvinējišijega": "samouporvinējišijego", "sāmauparvinējišijemu": "samouporvinējišijemu", "sāmauparvinējišijimi": "samouporvinējišijimi", "sāmauparvinējišijemi": "samouporvinējišijemi", "sāmauparvinējišijā": "samouporvinējišija", "sāmauparvinējišijeji": "samouporvinējišijeji", "sāmauparvinējišijan": "samouporvinējišijon", "sāmauparvinējišijejan": "samouporvinējišijejon", "sāmauparvinējišije": "samouporvinējišije", "sāmauparvinējišijišu": "samouporvinējišijišu", "sāmauparvinējišijimu": "samouporvinējišijimu", "nōjisāmauparvinējišiji": "najisamouporvinējišiji", "nōjisāmauparvinējišijega": "najisamouporvinējišijego", "nōjisāmauparvinējišijemu": "najisamouporvinējišijemu", "nōjisāmauparvinējišijimi": "najisamouporvinējišijimi", "nōjisāmauparvinējišijemi": "najisamouporvinējišijemi", "nōjisāmauparvinējišijā": "najisamouporvinējišija", "nōjisāmauparvinējišijeji": "najisamouporvinējišijeji", "nōjisāmauparvinējišijan": "najisamouporvinējišijon", "nōjisāmauparvinējišijejan": "najisamouporvinējišijejon", "nōjisāmauparvinējišije": "najisamouporvinējišije", "nōjisāmauparvinējišijišu": "najisamouporvinējišijišu", "nōjisāmauparvinējišijimu": "najisamouporvinējišijimu", "prejentaus": "prejentous", "sukenstilivaus": "sukenstilivous", "cejlaus": "cejlous", "serdinaus": "serdinous", "najserdinaus": "najserdinous", "edinaukas": "edinoukus", "dāvinaus": "davinous", "sāmauparvinas": "samouporvinus", "inaus": "inous", "sāmaubijistvan": "samoubijistvon", "źōstaj": "zastoj", "prakraj": "prokroj", "pakraj": "pokroj", "ślōvajkā": "ślavojka", "ślōvajka": "ślavojko", "jōkaj": "jakoj", "prejentaj": "prejentoj", "sukenstilivaj": "sukenstilivoj", "kajlaumu": "kajloumu", "kajlaj": "kajloj", "serdinaj": "serdinoj", "najserdinaj": "najserdinoj", "edinauku": "edinouku", "edinaukumi": "edinoukumi", "edinaukaj": "edinoukaj", "edinaukūs": "edinoukūs", "edinaukūn": "edinoukūn", "dāvinaj": "davinoj", "sāmauparvinu": "samouporvinu", "sāmauparvinumi": "samouporvinumi", "sāmauparvinaj": "samouporvinaj", "sāmauparvinūs": "samouporvinūs", "sāmauparvinūn": "samouporvinūn", "edinaukejšijim": "edinoukejšijim", "nōjiedinaukejšijim": "najiedinoukejšijim", "sāmauparvinejšijim": "samouporvinejšijim", "nōjisāmauparvinejšijim": "najisamouporvinejšijim", "sāmaubijistva": "samoubijistvo"};
+  var L = "A-Za-zÀ-žĀ-ɏ";
+  var kc = function (o, r) { return (r && o[0] !== o[0].toLowerCase()) ? r[0].toUpperCase() + r.slice(1) : r; };
+  var BYP = false, KC = {}, RC = {}, INVV = null;
+  var R0 = function (w) {   // stara forma pierwotna -> to, co z niej robi reszta warstwy wejściowej
+    if (RC.hasOwnProperty(w)) return RC[w]; var r = "";
+    BYP = true; try { r = String(window.slovoEarlyIn(w)).toLowerCase(); } catch (z) { r = ""; } BYP = false;
+    return (RC[w] = r); };
+  var K = function (w) {   // stara forma pierwotna -> forma prasłowiańska (albo undefined)
+    if (KC.hasOwnProperty(w)) return KC[w];
+    var M = window.SLOVO_NORMA_MAPS, inv = M && M.inv, r = inv ? inv[R0(w)] : undefined;
+    return (KC[w] = (typeof r === "string") ? r : undefined);
+  };
+  var vv = function (x) { if (!INVV) { INVV = {}; var M = window.SLOVO_NORMA_MAPS, inv = (M && M.inv) || {}; for (var k in inv) if (typeof inv[k] === "string") INVV[inv[k]] = 1; } return INVV[x] === 1; };
+  var isAdj = function (st) { var D = window.SlovoEngine && window.SlovoEngine._db, wt = D && D.wordTypes;
+    if (/^(moj|tvoj|svoj|naš|vaš|t|on|ov|sam|jak|tak|kak|jedin|edin|vьś|viš)$/.test(st)) return true;
+    try { return !!(wt && (wt.get(st + "y") === "adjective" || wt.get(st + "i") === "adjective")); } catch (z) { return false; } };
+  // stare „…on": A = z *-ǫ (biernik żeński, narzędnik, 1 os.) → -ān;  N = nijakie → -an
+  var clsOn = function (lw) { if (lw === "danon") return "A";   // chleb: *dōnā, biernik *dōnān
+    var k = K(lw); if (k === undefined && /[śź]/.test(lw)) k = K(lw.replace(/ś/g, "s").replace(/ź/g, "z"));
+    if (k === undefined) return /[oei]jon$/.test(lw) ? "A" : "";
+    var a = /ǫ$/.test(k) || /[oei]jon$/.test(lw), n = /[oe]$/.test(k);
+    if (a && !n && isAdj(k.slice(0, -1))) n = true;
+    if (n && !a && /o$/.test(k) && vv(k.slice(0, -1) + "ǫ")) a = true;
+    return (a && n) ? (/ǫ$/.test(k) ? "AN" : "NA") : (a ? "A" : n ? "N" : ""); };
+  var TOK = new RegExp("([" + L + "]+)|([^" + L + "]+)", "g");
+  var toks = function (t) { var r = [], m; TOK.lastIndex = 0; while ((m = TOK.exec(t))) r.push(m[1] !== undefined ? { w: m[1] } : { s: m[2] }); return r; };
+  var nextW = function (a, i) { return (a[i + 1] && a[i + 1].s !== undefined && /^[ \t]+$/.test(a[i + 1].s) && a[i + 2] && a[i + 2].w !== undefined) ? a[i + 2] : null; };
+  var PLW = /[ąęłóżćńĄĘŁÓŻĆŃ]/;
+  var midCap = function (a, i) { var w = a[i].w; if (w[0] === w[0].toLowerCase()) return false; var p = a[i - 1]; return !!(p && p.s !== undefined && !/[.!?:;„"«(\n]/.test(p.s) && a[i - 2]); };
+  var out = function (t) { if (t == null) return t; var a = toks(String(t)), i, x, lw, c, n;
+    for (i = a.length - 1; i >= 0; i--) { x = a[i]; if (x.w === undefined) continue; lw = x.w.toLowerCase(); x.k = "";
+      if (PLW.test(x.w) || /w/.test(lw) || (midCap(a, i) && K(lw) === undefined && K(lw.replace(/ś/g, "s").replace(/ź/g, "z")) === undefined)) { x.r = x.w; continue; }
+      if (/[^aeiouūē]un$/.test(lw) && lw.length > 3) x.k = "m";
+      else if (/on$/.test(lw) && lw.length > 2) { c = clsOn(lw); n = nextW(a, i);
+        x.k = c === "A" ? "A" : c === "N" ? "N" : ((c === "AN" || c === "NA") && n && (n.k === "A" || n.k === "N")) ? n.k : (c === "AN" ? "A" : c === "NA" ? "N" : ""); }
+      x.r = kc(x.w, fwd(lw, x.k === "A")); }
+    return a.map(function (y) { return y.w !== undefined ? y.r : y.s; }).join(""); };
+  var inn = function (t) { if (t == null) return t; var a = toks(String(t)), i, x, lw, n;
+    for (i = a.length - 1; i >= 0; i--) { x = a[i]; if (x.w === undefined) continue; lw = x.w.toLowerCase(); x.k = "";
+      if (PLW.test(x.w) || /w/.test(lw)) { x.r = x.w; continue; }
+      if (EXC.hasOwnProperty(lw)) { x.r = kc(x.w, EXC[lw]); continue; }
+      n = nextW(a, i);
+      if (/^(ni|nē|ne)?kas$/.test(lw)) { x.r = kc(x.w, (lw === "kas" && n && /^g[ao]d/i.test(n.w)) ? "kos" : lw.slice(0, -2) + "oto"); continue; }
+      x.r = kc(x.w, rev(lw, function (st) { var u = K(st + "un") !== undefined && !/ūn$/.test(R0(st + "un")), ko = K(st + "on"), c = clsOn(st + "on"), ow = c === "N" || c === "NA" || c === "AN", os = ko !== undefined && !/ǫ$/.test(ko), e;
+        if (u && (ow || os)) e = (n && (n.k === "un" || n.k === "on")) ? n.k : (os ? "on" : "un");
+        else if (u) e = "un"; else e = "on";
+        if (/j$/.test(st) && !u && !os && K(st + "in") !== undefined) e = "in";
+        x.k = e; return e; }));
+      if (!/[āō]/.test(lw) && x.r.toLowerCase() !== lw && K(x.r.toLowerCase()) === undefined && K(lw) !== undefined) { x.r = x.w; x.k = /un$/.test(lw) ? "un" : /on$/.test(lw) ? "on" : ""; }   // tekst w dawnej pisowni
+      if (midCap(a, i) && !/[āōūēśź]/.test(lw) && (lw.length <= 4 || K(x.r.toLowerCase()) === undefined)) x.r = x.w;
+      if (!x.k && /^(?:(?:pa|nā|nō)?virš|dam|sūn|med|val|led|pal)un$/.test(lw)) x.k = "un"; }
+    return a.map(function (y) { return y.w !== undefined ? y.r : y.s; }).join(""); };
+  window.slovoR177 = { out: out, inn: inn };
+  var wrap = function () { KC = {}; RC = {};
+    var o = window.slovoNormaOut, e = window.slovoEarlyIn, q = window.slovoGuessVariant;
+    if (typeof o === "function" && !o.__r177) { var f = function (t) { return out(o.apply(this, arguments)); }; f.__r177 = true; f.__r175 = true; f.__r168 = true; f.__r159 = true; f.__r158 = true; f.__r154 = true; f.__r149 = true; f.__r123 = true; f.__r124 = true; window.slovoNormaOut = f; }
+    if (typeof e === "function" && !e.__r177) { var g = function (t) { var a = Array.prototype.slice.call(arguments); if (!BYP) a[0] = inn(a[0]); return e.apply(this, a); };
+      g.__r177 = true; g.__r175 = true; g.__r168 = true; g.__r159 = true; g.__r158 = true; g.__r154 = true; g.__r151 = true; g.__r149 = true; g.__r144 = true; g.__r138 = true; g.__r136 = true; g.__r124 = true; g.__r123 = true; window.slovoEarlyIn = g; }
+    if (typeof q === "function" && !q.__r177) { var h = function (t) { var r0 = q.apply(this, arguments); if (r0 === "sle" || /[ъьěęǫǐǔ]/i.test(String(t || ""))) return r0;
+        var r1 = q.call(this, inn(String(t || ""))); return r1 === "sle" ? "sle" : r0; }; h.__r177 = true; window.slovoGuessVariant = h; }
+  };
+  var go = function () { setTimeout(wrap, 0); setTimeout(wrap, 260); };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
   wrap();
 })();
